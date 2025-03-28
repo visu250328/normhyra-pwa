@@ -4,12 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Normhyra Kalkylator</title>
-  <link rel="manifest" href="manifest.json">
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js');
-    }
-  </script>
   <style>
     body {
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -26,9 +20,15 @@
       border-radius: 8px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
+    .logo {
+      display: block;
+      max-width: 160px;
+      margin: 0 auto 1rem;
+    }
     h1 {
       font-size: 1.5rem;
       margin-bottom: 1rem;
+      text-align: center;
     }
     label {
       display: block;
@@ -78,6 +78,7 @@
 </head>
 <body>
   <div class="container">
+    <img src="Logga3.png" alt="Åke Sundvall logotyp" class="logo">
     <h1>Normhyra kalkylator</h1>
 
     <label for="method">Beräkningsmetod:</label>
