@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Normhyra Kalkylator</title>
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js');
+    }
+  </script>
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f8;
+      margin: 0;
+      padding: 1rem;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      background: white;
+      margin: auto;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin-top: 0.25rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1.5rem;
+      background-color: #d9534f;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #c9302c;
+    }
+    .result {
+      margin-top: 2rem;
+      background-color: #eef2f7;
+      padding: 1rem;
+      border-left: 4px solid #004085;
+      font-weight: bold;
+    }
+    .info {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #666;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+      .container {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Normhyra kalkylator</h1>
+
+    <label for="method">Beräkningsmetod:</label>
+    <select id="method">
+      <option value="2012">2012 års metod</option>
+      <option value="1991">1991 års metod</option>
+    </select>
+
+    <label for="rentType">Hyra per:</label>
+    <select id="rentType">
+      <option value="month">Månad</option>
+      <option value="year">År</option>
+    </select>
+
+    <label for="rent">Hyresbelopp (kr):</label>
+    <input type="number" id="rent" placeholder="Ange hyra...">
+    <div class="info" id="convertedRent"></div>
+
+    <label for="apartmentType">Lägenhetstyp:</label>
+    <select id="apartmentType">
+      <option value="1 rum och kokskåp">1 rum och kokskåp</option>
+      <option value="1 rum och kokvrå">1 rum och kokvrå</option>
+      <option value="1 rum och kök">1 rum och kök</option>
+      <option value="2 rum och kokvrå">2 rum och kokvrå</option>
+      <option value="1,5 rum och kök">1,5 rum och kök</option>
+      <option value="2 rum och kök">2 rum och kök</option>
+      <option value="2,5 rum och kök">2,5 rum och kök</option>
+      <option value="3 rum och kök">3 rum och kök</option>
+      <option value="4 rum och kök">4 rum och kök</option>
+      <option value="5 rum och kök">5 rum och kök</option>
+    </select>
+
+    <label for="area">Lägenhetsyta (kvm):</label>
+    <input type="number" id="area" placeholder="Ange yta...">
+
+    <div class="result" id="result">Fyll i uppgifterna för att beräkna normhyran.</div>
+
+    <button onclick="clearForm()">Rensa</button>
+  </div>
+
+  <script>
+    const apartmentPoints2012 = {
+      "1 rum och kokskåp": 27,
+      "1 rum och kokvrå": 30,
+      "1 rum och kök": 34,
+      "2 rum och kokvrå": 34,
+      "1,5 rum och kök": 37,
+      "2 rum och kök": 40,
+      "2,5 rum och kök": 42,
+      "3 rum och kök": 44,
+      "4 rum och kök": 49,
+      "5 rum och kök": 52
+    };
+
+    const apartmentPoints1991 = {
+      "1 rum och kokskåp": 24,
+      "1 rum och kokvrå": 27,
+      "1 rum och kök": 34,
+      "2 rum och kokvrå": 34,
+      "1,5 rum och kök": 37,
+      "2 rum och kök": 40,
+      "2,5 rum och kök": 42,
+      "3 rum och kök": 44,
+      "4 rum och kök": 49,
+      "5 rum och kök": 52
+    };
+
+    const rentInput = document.getElementById("rent");
+    const rentType = document.getElementById("rentType");
+    const method = document.getElementById("method");
+    const apartmentType = document.getElementById("apartmentType");
+    const areaInput = document.getElementById("area");
+    const resultDiv = document.getElementById("result");
+    const convertedRentDiv = document.getElementById("convertedRent");
+
+    function formatCurrency(value) {
+      return value.toLocaleString("sv-SE", { maximumFractionDigits: 0 }) + " kr";
+    }
+
+    function calculateNormRent() {
+      const rent = parseFloat(rentInput.value);
+      const area = parseFloat(areaInput.value);
+      const apartmentKey = apartmentType.value;
+      const isMonthly = rentType.value === "month";
+      const selectedMethod = method.value;
+
+      let points;
+      if (selectedMethod === "2012") {
+        points = apartmentPoints2012[apartmentKey];
+      } else if (selectedMethod === "1991") {
+        points = apartmentPoints1991[apartmentKey];
+      }
+
+      if (isNaN(rent) || isNaN(area) || points === undefined) {
+        resultDiv.textContent = "Fyll i alla fält för att beräkna normhyran.";
+        convertedRentDiv.textContent = "";
+        return;
+      }
+
+      const annualRent = isMonthly ? rent * 12 : rent;
+      const converted = isMonthly ? `Årshyra: ${formatCurrency(annualRent)}` : `Månadshyra: ${formatCurrency(rent / 12)}`;
+      convertedRentDiv.textContent = converted;
+
+      let normRent;
+      if (selectedMethod === "2012") {
+        normRent = (annualRent * 121) / ((points + area) * 77);
+      } else {
+        normRent = (annualRent * 100) / ((points + area) * 75);
+      }
+
+      resultDiv.textContent = `Beräknad normhyra (${selectedMethod}): ${formatCurrency(normRent)}`;
+    }
+
+    function clearForm() {
+      rentInput.value = "";
+      areaInput.value = "";
+      rentType.selectedIndex = 0;
+      method.selectedIndex = 0;
+      apartmentType.selectedIndex = 0;
+      convertedRentDiv.textContent = "";
+      resultDiv.textContent = "Fyll i uppgifterna för att beräkna normhyran.";
+    }
+
+    [rentInput, rentType, method, apartmentType, areaInput].forEach(el => {
+      el.addEventListener("input", calculateNormRent);
+      el.addEventListener("change", calculateNormRent);
+    });
+  </script>
+</body>
+</html>
