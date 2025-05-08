@@ -87,21 +87,34 @@
     <img src="Logga3.png" alt="Åke Sundvall logotyp" class="logo">
     <h1>Normhyra-kalkylator</h1>
 
+    <label for="mode">Beräkningsläge:</label>
+    <select id="mode">
+      <option value="rentToNorm">Från hyra till normhyra</option>
+      <option value="normToRent">Från normhyra till hyra</option>
+    </select>
+
+    <div id="rentInputs">
+      <label for="rentType">Hyra per:</label>
+      <select id="rentType">
+        <option value="month">Månad</option>
+        <option value="year">År</option>
+      </select>
+
+      <label for="rent">Hyresbelopp (kr):</label>
+      <input type="number" id="rent" placeholder="Ange hyra...">
+      <div class="info" id="convertedRent"></div>
+    </div>
+
+    <div id="normInput" style="display:none">
+      <label for="norm">Normhyra (kr):</label>
+      <input type="number" id="norm" placeholder="Ange normhyra...">
+    </div>
+
     <label for="method">Beräkningsmetod:</label>
     <select id="method">
       <option value="2012">2012 års metod</option>
       <option value="1991">1991 års metod</option>
     </select>
-
-    <label for="rentType">Hyra per:</label>
-    <select id="rentType">
-      <option value="month">Månad</option>
-      <option value="year">År</option>
-    </select>
-
-    <label for="rent">Hyresbelopp (kr):</label>
-    <input type="number" id="rent" placeholder="Ange hyra...">
-    <div class="info" id="convertedRent"></div>
 
     <label for="apartmentType">Lägenhetstyp:</label>
     <select id="apartmentType">
@@ -120,37 +133,13 @@
     <label for="area">Lägenhetsyta (kvm):</label>
     <input type="number" id="area" placeholder="Ange yta...">
 
-    <div class="result" id="result">Fyll i uppgifterna för att beräkna normhyran.</div>
-
+    <div class="result" id="result">Fyll i uppgifterna för att beräkna.</div>
     <button onclick="clearForm()">Rensa</button>
   </div>
 
   <script>
-    const apartmentPoints2012 = {
-      "1 rum och kokskåp": 27,
-      "1 rum och kokvrå": 30,
-      "1 rum och kök": 34,
-      "2 rum och kokvrå": 34,
-      "1,5 rum och kök": 37,
-      "2 rum och kök": 40,
-      "2,5 rum och kök": 42,
-      "3 rum och kök": 44,
-      "4 rum och kök": 49,
-      "5 rum och kök": 52
-    };
-
-    const apartmentPoints1991 = {
-      "1 rum och kokskåp": 24,
-      "1 rum och kokvrå": 27,
-      "1 rum och kök": 34,
-      "2 rum och kokvrå": 34,
-      "1,5 rum och kök": 37,
-      "2 rum och kök": 40,
-      "2,5 rum och kök": 42,
-      "3 rum och kök": 44,
-      "4 rum och kök": 49,
-      "5 rum och kök": 52
-    };
+    const apartmentPoints2012 = {"1 rum och kokskåp": 27,"1 rum och kokvrå": 30,"1 rum och kök": 34,"2 rum och kokvrå": 34,"1,5 rum och kök": 37,"2 rum och kök": 40,"2,5 rum och kök": 42,"3 rum och kök": 44,"4 rum och kök": 49,"5 rum och kök": 52};
+    const apartmentPoints1991 = {"1 rum och kokskåp": 24,"1 rum och kokvrå": 27,"1 rum och kök": 34,"2 rum och kokvrå": 34,"1,5 rum och kök": 37,"2 rum och kök": 40,"2,5 rum och kök": 42,"3 rum och kök": 44,"4 rum och kök": 49,"5 rum och kök": 52};
 
     const rentInput = document.getElementById("rent");
     const rentType = document.getElementById("rentType");
@@ -159,43 +148,51 @@
     const areaInput = document.getElementById("area");
     const resultDiv = document.getElementById("result");
     const convertedRentDiv = document.getElementById("convertedRent");
+    const normInput = document.getElementById("norm");
+    const modeSelect = document.getElementById("mode");
+    const rentInputs = document.getElementById("rentInputs");
+    const normBox = document.getElementById("normInput");
 
     function formatCurrency(value) {
       return value.toLocaleString("sv-SE", { maximumFractionDigits: 0 }) + " kr";
     }
 
-    function calculateNormRent() {
-      const rent = parseFloat(rentInput.value);
+    function calculate() {
       const area = parseFloat(areaInput.value);
       const apartmentKey = apartmentType.value;
-      const isMonthly = rentType.value === "month";
       const selectedMethod = method.value;
+      const isMonthly = rentType.value === "month";
+      const mode = modeSelect.value;
 
-      let points;
-      if (selectedMethod === "2012") {
-        points = apartmentPoints2012[apartmentKey];
-      } else if (selectedMethod === "1991") {
-        points = apartmentPoints1991[apartmentKey];
-      }
-
-      if (isNaN(rent) || isNaN(area) || points === undefined) {
-        resultDiv.textContent = "Fyll i alla fält för att beräkna normhyran.";
-        convertedRentDiv.textContent = "";
+      let points = selectedMethod === "2012" ? apartmentPoints2012[apartmentKey] : apartmentPoints1991[apartmentKey];
+      if (isNaN(area) || points === undefined) {
+        resultDiv.textContent = "Fyll i alla fält för att beräkna.";
         return;
       }
 
-      const annualRent = isMonthly ? rent * 12 : rent;
-      const converted = isMonthly ? `Årshyra: ${formatCurrency(annualRent)}` : `Månadshyra: ${formatCurrency(rent / 12)}`;
-      convertedRentDiv.textContent = converted;
+      const denominator = selectedMethod === "2012" ? ((points + area) * 77) : ((points + area) * 75);
 
-      let normRent;
-      if (selectedMethod === "2012") {
-        normRent = (annualRent * 121) / ((points + area) * 77);
+      if (mode === "rentToNorm") {
+        const rent = parseFloat(rentInput.value);
+        if (isNaN(rent)) {
+          resultDiv.textContent = "Ange hyresbelopp.";
+          return;
+        }
+        const annualRent = isMonthly ? rent * 12 : rent;
+        const converted = isMonthly ? `Årshyra: ${formatCurrency(annualRent)}` : `Månadshyra: ${formatCurrency(rent / 12)}`;
+        convertedRentDiv.textContent = converted;
+        const norm = selectedMethod === "2012" ? (annualRent * 121) / denominator : (annualRent * 100) / denominator;
+        resultDiv.textContent = `Beräknad normhyra: ${formatCurrency(norm)}`;
       } else {
-        normRent = (annualRent * 100) / ((points + area) * 75);
+        const norm = parseFloat(normInput.value);
+        if (isNaN(norm)) {
+          resultDiv.textContent = "Ange normhyra.";
+          return;
+        }
+        const annualRent = selectedMethod === "2012" ? (norm * denominator) / 121 : (norm * denominator) / 100;
+        const monthly = annualRent / 12;
+        resultDiv.textContent = `Årshyra: ${formatCurrency(annualRent)}  |  Månadshyra: ${formatCurrency(monthly)}`;
       }
-
-      resultDiv.textContent = `Beräknad normhyra (${selectedMethod}): ${formatCurrency(normRent)}`;
     }
 
     function clearForm() {
@@ -205,12 +202,25 @@
       method.selectedIndex = 0;
       apartmentType.selectedIndex = 0;
       convertedRentDiv.textContent = "";
-      resultDiv.textContent = "Fyll i uppgifterna för att beräkna normhyran.";
+      resultDiv.textContent = "Fyll i uppgifterna för att beräkna.";
+      normInput.value = "";
     }
 
-    [rentInput, rentType, method, apartmentType, areaInput].forEach(el => {
-      el.addEventListener("input", calculateNormRent);
-      el.addEventListener("change", calculateNormRent);
+    [rentInput, rentType, method, apartmentType, areaInput, normInput, modeSelect].forEach(el => {
+      el.addEventListener("input", calculate);
+      el.addEventListener("change", calculate);
+    });
+
+    modeSelect.addEventListener("change", () => {
+      if (modeSelect.value === "rentToNorm") {
+        rentInputs.style.display = "block";
+        normBox.style.display = "none";
+      } else {
+        rentInputs.style.display = "none";
+        normBox.style.display = "block";
+        convertedRentDiv.textContent = "";
+      }
+      clearForm();
     });
   </script>
 </body>
